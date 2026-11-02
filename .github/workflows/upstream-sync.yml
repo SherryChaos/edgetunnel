@@ -1,0 +1,45 @@
+name: upstream-sync
+
+on:
+  schedule:
+    - cron: '20 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge upstream, keep our deploy config
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898286+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/cmliu/edgetunnel.git || true
+          git fetch --no-tags upstream main
+          UPSTREAM_SHA=$(git rev-parse upstream/main)
+          git merge --no-edit -X theirs upstream/main
+          cat > wrangler.toml <<'TOML'
+          name = "edgetunnel"
+          main = "_worker.js"
+          compatibility_date = "2025-11-04"
+          keep_vars = true
+
+          [[kv_namespaces]]
+          binding = "KV"
+          id = "216bbbf9aef64342aabf9fb76abc3102"
+          TOML
+          git add -A wrangler.toml _worker.js .github
+          if git diff --cached --quiet; then
+            echo "upstream 无变化，不提交"
+            exit 0
+          fi
+          git commit -m "sync: upstream ${UPSTREAM_SHA}"
+          git push origin HEAD:main
