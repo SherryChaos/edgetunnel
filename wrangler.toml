@@ -6,3 +6,5 @@ keep_vars = true
 [[kv_namespaces]]
 binding = "KV"
 id = "33e54e3f2ded478f973c50b99ff2a4e8"
+
+# deploy-trigger: 2026-11-02T19:10Z
